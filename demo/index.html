@@ -22,8 +22,15 @@
       <h3>Basic yo-generador demo</h3>
       <demo-snippet>
         <template>
-          <yo-generador></yo-generador>
+          <paper-button raised   >modal dialog</paper-button>
+          <yo-generador id="generador"></yo-generador>
         </template>
+        <script>
+          document.getElementsByTagName('paper-button')[0].addEventListener('click', () => {
+            console.log('abrir');
+            document.getElementById('generador').abrir();
+          });
+        </script>
       </demo-snippet>
     </div>
   </body>
