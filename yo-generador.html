@@ -4,20 +4,43 @@
 <link rel="import" href="../paper-dialog/paper-dialog.html">
 <link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
 <link rel="import" href="../granite-qrcode-generator/granite-qrcode-generator.html">
+<link rel="import" href="yo-certificado.html">
+
 <script src="../jspdf/dist/jspdf.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/5.4.2/firebase.js"></script>
+<!-- <script src="https://www.gstatic.com/firebasejs/5.0.4/firebase-firestore.js"></script> -->
+
+<script>
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyAKYJDAv_vMlxzxUgi2bpHBOym26wl2NcU",
+    authDomain: "cabalgante-ddfda.firebaseapp.com",
+    databaseURL: "https://cabalgante-ddfda.firebaseio.com",
+    projectId: "cabalgante-ddfda",
+    storageBucket: "cabalgante-ddfda.appspot.com",
+    messagingSenderId: "904286653905"
+  };
+  firebase.initializeApp(config);
+</script>
 
 <dom-module id="yo-generador">
   <template>
     <style>
-      paper-dialog { 
+      paper-dialog {
         @apply --layout-vertical;
         @apply --layout-center;
         background-color: white;
-        width: 400px;
+        width: 580px;
       }
+      /* granite-qrcode-generator {
+        visibility: hidden;
+        position: absolute;
+        top: 0;
+      } */
+
     </style>
     <paper-dialog id="dialog" with-backdrop>
-      <h2>Reserva de Boleta</h2>
+      <h2>Reserva de Boleta [[boletas]]</h2>
 
       <paper-input id="inputNombres" label="Nombre Completo" value="{{perfil.nombres}}" auto-validate pattern="^[\u00F1A-Za-z _]*[\u00F1A-Za-z][\u00F1A-Za-z _]*$"
         error-message="Solo letras!" required></paper-input>
@@ -25,14 +48,17 @@
       <paper-input id="inputTelefono" label="Celular" value="{{perfil.telefono}}" char-counter maxlength="10"
         auto-validate pattern="^[3][0,1,2,5][0-9]*$" error-message="Solo números!">
 
-      <iron-icon icon="mail" slot="prefix"></iron-icon>
+        <iron-icon icon="mail" slot="prefix"></iron-icon>
       </paper-input>
-      <paper-button raised on-tap="_reservar" >Reservar Ticket</paper-button>
-      <granite-qrcode-generator id="qr" mode="alphanumeric" format="png">
-      </granite-qrcode-generator>
+      <paper-button raised on-tap="_reservar" disabled="[[!habilitado]]">Reservar Ticket</paper-button>
+      <granite-qrcode-generator id="qr" mode="alphanumeric" format="png" base64="{{imagen}}">
+        </granite-qrcode-generator>
+      <!-- <yo-certificado id="certificado" name="certificado" user="{{perfil.nombres}}" imagen="{{imagen}}"></yo-certificado> -->
+      <paper-button raised on-tap="descargar">Descargar Boleta</paper-button>
+     
     </paper-dialog>
 
-
+   
   </template>
 
   <script>
@@ -54,27 +80,110 @@
               return {};
             }
           },
-          validar:{
+          habilitado: {
             type: Boolean,
             value: false
+          },
+          db: {
+            type: Object
+          },
+          evento: {
+            type: Object
+          },
+          boletas: {
+            type: Number,
+            value: 0
+          },
+          imagen: {
+            type: String,
+            notify: true
           }
         };
       }
-      _reservar() {
-        if(this.perfil.nombres && this.perfil.telefono){
-          console.log(this.$.inputNombres);
-          let dato = this.perfil.nombres + ' ' + this.perfil.telefono;
-          console.log(dato);
-          this.$.qr.data = dato;
-          this.$.qr.generateQRCode();
-          this.$.dialog.notifyResize();
-          //let doc = new jsPDF();
-          //doc.text('Hello world!', 10, 10);
-          //doc.save('a4.pdf');
+      static get observers() {
+        return [
+          // Observer method name, followed by a list of dependencies, in parenthesis
+          '_validar(perfil.*)'
+        ]
+      }
+      _validar() {
+        if (this.perfil.nombres && this.perfil.telefono) {
+          this.habilitado = true;
         }
       }
-      abrir(){
+
+      constructor() {
+        super();
+        console.log("constructor");
+        this.db = firebase.apps[0].firestore();
+      }
+
+      ready() {
+        super.ready();
+        this.evento = this.db.collection("1").doc("r7hnEktzAjZPrAc0UDRU");
+        var that = this;
+        this.evento.onSnapshot(function(doc) {
+            that.boletas = doc.data().boletas
+         });
+        // this.evento.get().then(function (doc) {
+        //   if (doc.exists) {
+        //     console.log("Document data:", that.boletas = doc.data().boletas);
+        //   } else {
+        //     // doc.data() will be undefined in this case
+        //     console.log("No such document!");
+        //   }
+        // }).catch(function (error) {
+        //   console.log("Error getting document:", error);
+        // });
+        this.$.dialog.notifyResize();
+      }
+      _reservar() {
+
+        console.log(this.$.inputNombres);
+        let dato = this.perfil.nombres + ' ' + this.perfil.telefono;
+        console.log(dato);
+        this.$.qr.data = dato;
+        this.$.qr.generateQRCode();
+        this.$.dialog.notifyResize();
+        
+        var that = this;
+        if (this.boletas > 0) {
+
+          this.db.collection("reservas").add(this.perfil)
+            .then(function (docRef) {
+              console.log("Document written with ID: ", docRef);
+              that.evento.set({
+                boletas: that.boletas - 1
+              })
+                .then(function () {
+                  console.log("Document successfully written!");
+                })
+                .catch(function (error) {
+                  console.error("Error writing document: ", error);
+                });
+            })
+            .catch(function (error) {
+              console.error("Error adding document: ", error);
+            });
+        }
+      }
+      abrir() {
         this.$.dialog.open();
+      }
+      descargar(){
+        let doc = new jsPDF();
+        var texto = 'Concierto el Cabalgante - Número de boleta:' + this.boletas;
+        doc.text(texto, 10, 10);
+        texto = 'Reserva a nombre de: ' + this.perfil.nombres;
+        doc.text(texto , 10, 20);
+        texto = "Te esperamos en fundación Gilberto Alzate Avendaño "
+        doc.text(texto , 10, 30);
+        texto = "Cl. 10 #3-16 barrio La Candelaria"
+        doc.text(texto , 10, 40);
+        texto = "Imprime este archivo o tomale una foto al siguiente codigo :"
+        doc.text(texto , 10, 50);
+        doc.addImage(this.imagen, 'PNG', 30, 60, 145, 145)
+        doc.save( this.perfil.telefono + '.pdf');
       }
     }
 

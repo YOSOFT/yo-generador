@@ -1,0 +1,130 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+
+<dom-module id="yo-certificado">
+
+    <template>
+        <style>
+            :host {
+                background-color: white;
+                @apply --layout-vertical;
+                margin: auto;
+                width: 500px;
+            }
+
+            a {
+                background-color: var(--app-primary-color);
+                padding: 8px;
+                text-decoration: none;
+                color: white;
+                text-align: center;
+                font-weight: bold;
+                cursor: pointer;
+                margin: 2px;
+                user-select: none;
+                text-transform: uppercase;
+            }
+        </style>
+        <a id="download" on-click="_descargar">
+            Descargar
+        </a>
+        <div id="mensaje"></div>
+        <canvas id="miCanvas" width="500" height="279"></canvas>
+    </template>
+    <script>
+        class YoCertificado extends Polymer.Element {
+            static get is() { return 'yo-certificado'; }
+            static get properties() {
+                return {
+                    nombre: {
+                        type: String
+                    },
+                    db: {
+                        type: Object
+                    },
+                    perfil: {
+                        type: Object
+                    },
+                    user: {
+                        type: Object,
+                        value: 'Julio Cesar Ramirez Ospina',
+                        observer: '_userChanged'
+                    },
+                    curso: {
+                        type: Object
+                    },
+                    imagen: {
+                        type: String,
+                        value: '',
+                        observer: '_imagenChanged'
+                    }
+
+                }
+            }
+            _userChanged() {
+                console.log("usuario cambio");
+                this.perfil = null;
+                if (!this.user) return;
+            }
+            _imagenChanged() {
+                console.log("ingresa a pintar");
+                if (!this.imagen) return;
+                var canvas = that.$.miCanvas;
+                var ctx = canvas.getContext('2d');
+
+                var image = new Image();
+                image.onload = function () {
+                    ctx.drawImage(image, 120, 180);
+                };
+                image.src = this.imagen;
+                console.log("imagenChanged", this.imagen);
+
+            }
+            constructor() {
+                super();
+            }
+            ready() {
+                super.ready();
+                this._renderizar();
+            }
+
+            _renderizar() {
+                console.log('renderizar');
+                var that = this;
+
+                var mascara = new Image();
+                var canvas = that.$.miCanvas;
+                var ctx = canvas.getContext('2d');
+                ctx.fillStyle = "white";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                mascara.src = "../boletaFinal.png";
+                mascara.onload = function () {
+                    ctx.drawImage(mascara, 0, 0, 500, 279);
+                };
+
+                var centerX = canvas.width / 2;
+                ctx.textAlign = "center";
+
+                ctx.font = "20pt Raleway";
+                ctx.fillStyle = "black";
+                var nombre = that.perfil.nombres + ' ' + that.perfil.apellidos;
+                ctx.fillText(nombre, centerX, 300);
+
+            }
+            _descargar() {
+                var canvas = this.$.miCanvas;
+                var filename = "certificado";
+                if (canvas.msToBlob) { //para internet explorer
+                    var blob = canvas.msToBlob();
+                    window.navigator.msSaveBlob(blob, filename + ".png");// la extensión de preferencia pon jpg o png
+                } else {
+                    var link = this.$.download;
+                    //Otros navegadores: Google chrome, Firefox etc...
+                    link.href = canvas.toDataURL("image/png");// Extensión .png ("image/png") --- Extension .jpg ("image/jpeg")
+                    link.download = filename;
+                }
+            }
+        }
+        customElements.define(YoCertificado.is, YoCertificado);
+    </script>
+</dom-module>
