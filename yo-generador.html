@@ -54,7 +54,7 @@
       <granite-qrcode-generator id="qr" mode="alphanumeric" format="png" base64="{{imagen}}">
         </granite-qrcode-generator>
       <!-- <yo-certificado id="certificado" name="certificado" user="{{perfil.nombres}}" imagen="{{imagen}}"></yo-certificado> -->
-      <paper-button raised on-tap="descargar">Descargar Boleta</paper-button>
+      <paper-button raised on-tap="descargar" id="descargar" disabled="true">Descargar Boleta</paper-button>
      
     </paper-dialog>
 
@@ -145,7 +145,7 @@
         this.$.qr.data = dato;
         this.$.qr.generateQRCode();
         this.$.dialog.notifyResize();
-        
+        this.$.descargar.disabled = false; 
         var that = this;
         if (this.boletas > 0) {
 
