@@ -9,7 +9,7 @@
 <script src="../jspdf/dist/jspdf.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/5.4.2/firebase.js"></script>
 <!-- <script src="https://www.gstatic.com/firebasejs/5.0.4/firebase-firestore.js"></script> -->
-
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script> -->
 <script>
   // Initialize Firebase
   var config = {
@@ -40,7 +40,8 @@
 
     </style>
     <paper-dialog id="dialog" with-backdrop>
-      <h2>Reserva de Boleta [[boletas]]</h2>
+      <h1>Reservas </h1>
+      <h2>Costo de Boleta $30.000 No: [[boletas]]</h2>
 
       <paper-input id="inputNombres" label="Nombre Completo" value="{{perfil.nombres}}" auto-validate pattern="^[\u00F1A-Za-z _]*[\u00F1A-Za-z][\u00F1A-Za-z _]*$"
         error-message="Solo letras!" required></paper-input>
@@ -51,17 +52,20 @@
         <iron-icon icon="mail" slot="prefix"></iron-icon>
       </paper-input>
       <paper-button raised on-tap="_reservar" disabled="[[!habilitado]]">Reservar Ticket</paper-button>
-      <granite-qrcode-generator id="qr" mode="alphanumeric" format="png" base64="{{imagen}}">
+      <granite-qrcode-generator id="qr" mode="alphanumeric" format="png">
         </granite-qrcode-generator>
-      <!-- <yo-certificado id="certificado" name="certificado" user="{{perfil.nombres}}" imagen="{{imagen}}"></yo-certificado> -->
+      <!-- <yo-certificado id="certificado" name="certificado" user="{{perfil.nombres}}"
+        
+      ></yo-certificado> -->
       <paper-button raised on-tap="descargar" id="descargar" disabled="true">Descargar Boleta</paper-button>
-     
+      <!-- <a id="download">Tomar screenshot y descargar</a> -->
     </paper-dialog>
 
    
   </template>
 
   <script>
+    
     /**
      * `yo-generador`
      * generador de codigo qr
@@ -104,6 +108,7 @@
         return [
           // Observer method name, followed by a list of dependencies, in parenthesis
           '_validar(perfil.*)'
+          
         ]
       }
       _validar() {
@@ -116,25 +121,20 @@
         super();
         console.log("constructor");
         this.db = firebase.apps[0].firestore();
+        
       }
 
       ready() {
         super.ready();
+        // this.$.qr.addEventListener('base64', function(datos){
+        //   console.log("Manejador de eventos",datos.detail.imagen);
+        //   this.$.certificado.imagen = datos.detail.imagen;
+        // });
         this.evento = this.db.collection("1").doc("r7hnEktzAjZPrAc0UDRU");
         var that = this;
         this.evento.onSnapshot(function(doc) {
             that.boletas = doc.data().boletas
          });
-        // this.evento.get().then(function (doc) {
-        //   if (doc.exists) {
-        //     console.log("Document data:", that.boletas = doc.data().boletas);
-        //   } else {
-        //     // doc.data() will be undefined in this case
-        //     console.log("No such document!");
-        //   }
-        // }).catch(function (error) {
-        //   console.log("Error getting document:", error);
-        // });
         this.$.dialog.notifyResize();
       }
       _reservar() {
@@ -171,6 +171,15 @@
         this.$.dialog.open();
       }
       descargar(){
+        var that = this;
+        // html2canvas(this.$.dialog, {
+        //   onrendered (canvas) {
+        //     var link = that.$.download;
+        //     var image = canvas.toDataURL();
+        //     link.href = image;
+        //     link.download = 'screenshot.png';
+        //   }
+        // });
         let doc = new jsPDF();
         var texto = 'Concierto el Cabalgante - Número de boleta:' + this.boletas;
         doc.text(texto, 10, 10);
@@ -180,9 +189,11 @@
         doc.text(texto , 10, 30);
         texto = "Cl. 10 #3-16 barrio La Candelaria"
         doc.text(texto , 10, 40);
-        texto = "Imprime este archivo o tomale una foto al siguiente codigo :"
+        texto = "Imprime este archivo o guarda este archivo :"
         doc.text(texto , 10, 50);
-        doc.addImage(this.imagen, 'PNG', 30, 60, 145, 145)
+        texto = "Costo boleta: $30.000"
+        doc.text(texto , 10, 60);
+        // doc.addImage(this.imagen, 'PNG', 30, 60, 145, 145)
         doc.save( this.perfil.telefono + '.pdf');
       }
     }
